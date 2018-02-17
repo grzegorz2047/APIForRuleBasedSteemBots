@@ -100,7 +100,9 @@ public class Main {
             return;
         }
         boolean isMaxOneVote = globalConfigData.isMaxOneVote();
-        runBot(steemJ, users, globalConfigData.getFrequenceCheckInMilliseconds(), botAccount, globalConfigData.isCheckTagsEnabled(), isMaxOneVote);
+        String commentTags = globalConfigData.getCommentTags();
+        String[] listOfCommentTags = commentTags.split(",");
+        runBot(steemJ, users, globalConfigData.getFrequenceCheckInMilliseconds(), botAccount, globalConfigData.isCheckTagsEnabled(), isMaxOneVote, globalConfigData.getCommentMessage(), listOfCommentTags);
     }
 
     private static boolean createFile(Path usersPath) {
@@ -136,7 +138,7 @@ public class Main {
     }
 
 
-    private static void runBot(SteemJ steemJ, HashMap<String, User> users, Long frequenceCheckInMilliseconds, AccountName botAccount, boolean checkTags, boolean isMaxOneVote) {
+    private static void runBot(SteemJ steemJ, HashMap<String, User> users, Long frequenceCheckInMilliseconds, AccountName botAccount, boolean checkTags, boolean isMaxOneVote, String message, String[] commentTags) {
         List<AccountName> steemUsernames = new ArrayList<>();
         for (String username : users.keySet()) {
             System.out.println("Adding " + username + " to checkList");
@@ -220,6 +222,8 @@ public class Main {
                         String votedMsg = "Successfully voted on " + userAccountName + " post " + permlinkText;
                         System.out.println(votedMsg);
                         writeLog("bot.log", votedMsg);
+                        message = message.replaceAll("<author>", userAccountName);
+                        steemJ.createComment(botAccount, userAccount, newestPermlink, message, commentTags);
                     } catch (SteemResponseException | SteemCommunicationException ex) {
                         System.out.println("Errow while responding action toward " + userAccountName + " on steem waiting!");
                     } catch (SteemInvalidTransactionException e) {

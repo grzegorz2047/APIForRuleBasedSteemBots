@@ -72,4 +72,8 @@ public class GlobalConfigData {
     public boolean isMaxOneVote() {
         return maxOneVote;
     }
+
+    public String getCommentMessage() {
+        return commentMessage;
+    }
 }
