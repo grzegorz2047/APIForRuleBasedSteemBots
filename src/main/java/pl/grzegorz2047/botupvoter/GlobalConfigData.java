@@ -76,4 +76,8 @@ public class GlobalConfigData {
     public String getCommentMessage() {
         return commentMessage;
     }
+
+    public boolean isCOmmentingEnabled() {
+        return commentingEnabled;
+    }
 }

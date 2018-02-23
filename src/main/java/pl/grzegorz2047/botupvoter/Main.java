@@ -2,7 +2,6 @@ package pl.grzegorz2047.botupvoter;
 
 import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.apis.database.models.state.Discussion;
-import eu.bittrade.libs.steemj.apis.follow.model.BlogEntry;
 import eu.bittrade.libs.steemj.base.models.*;
 import eu.bittrade.libs.steemj.configuration.SteemJConfig;
 import eu.bittrade.libs.steemj.enums.PrivateKeyType;
@@ -12,6 +11,7 @@ import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import pl.grzegorz2047.botupvoter.bot.BotActions;
 import pl.grzegorz2047.botupvoter.configuration.GlobalConfigurationLoader;
 import pl.grzegorz2047.botupvoter.interval.Interval;
 import pl.grzegorz2047.botupvoter.interval.IntervalHandler;
@@ -32,8 +32,6 @@ import java.util.stream.Stream;
 
 public class Main {
 
-    private static HashMap<String, String> currentSeenUsersPosts = new HashMap<>();
-    private static HashMap<String, Long> lastVotedUser = new HashMap<>();
 
     public static void main(String[] args) throws SteemResponseException, SteemCommunicationException {
         Properties globalProperties;
@@ -99,10 +97,10 @@ public class Main {
             System.exit(1);
             return;
         }
-        boolean isMaxOneVote = globalConfigData.isMaxOneVote();
+        boolean isMaxOneVotePerCertainTime = globalConfigData.isMaxOneVote();
         String commentTags = globalConfigData.getCommentTags();
         String[] listOfCommentTags = commentTags.split(",");
-        runBot(steemJ, users, globalConfigData.getFrequenceCheckInMilliseconds(), botAccount, globalConfigData.isCheckTagsEnabled(), isMaxOneVote, globalConfigData.getCommentMessage(), listOfCommentTags);
+        runBot(steemJ, users, globalConfigData.getFrequenceCheckInMilliseconds(), botAccount, globalConfigData.isCheckTagsEnabled(), isMaxOneVotePerCertainTime, globalConfigData.getCommentMessage(), listOfCommentTags, globalConfigData.isCOmmentingEnabled());
     }
 
     private static boolean createFile(Path usersPath) {
@@ -138,12 +136,9 @@ public class Main {
     }
 
 
-    private static void runBot(SteemJ steemJ, HashMap<String, User> users, Long frequenceCheckInMilliseconds, AccountName botAccount, boolean checkTags, boolean isMaxOneVote, String message, String[] commentTags) {
-        List<AccountName> steemUsernames = new ArrayList<>();
-        for (String username : users.keySet()) {
-            System.out.println("Adding " + username + " to checkList");
-            steemUsernames.add(new AccountName(username));
-        }
+    private static void runBot(SteemJ steemJ, HashMap<String, User> users, Long frequenceCheckInMilliseconds, AccountName botAccount, boolean checkTags, boolean isMaxOneVotePerCertainTime, String message, String[] commentTags, boolean commentEnabled) {
+        List<AccountName> steemUsernames = addAccountsToProcess(users);
+        BotActions bot = new BotActions();
         while (true) {
             try {
                 List<ExtendedAccount> accounts = steemJ.getAccounts(Collections.singletonList(botAccount));
@@ -161,7 +156,7 @@ public class Main {
                     User user = users.get(userAccountName);
                     Permlink newestPermlink;
                     try {
-                        newestPermlink = getNewestDiscusion(steemJ, userAccount, user.getFollowingTags());
+                        newestPermlink = BotActions.getNewestDiscusion(steemJ, userAccount, user.getFollowingTags());
                         //System.out.println("received newest discussion from " + userAccountName);
                         //System.out.println("permlink " + newestPermlink);
                     } catch (Exception ex) {
@@ -172,43 +167,23 @@ public class Main {
 
                     List<VoteState> activeVotes = content.getActiveVotes();
                     if (checkTags) {
-                        String jsonMetadata = content.getJsonMetadata();
-                        //System.out.println("Discussion " + content.getTitle());
-                        JSONObject jsonObject = new JSONObject(jsonMetadata);
-                        JSONArray jsonArray = (JSONArray) jsonObject.get("tags");
-                        boolean isEligiblePost = isEligiblePost(user, jsonArray);
-                        if (!isEligiblePost) {
-                            continue;
-                        }
+                        if (!hasPostValidTag(user, content)) continue;
                     }
 //                    List<VoteState> activeVotes = steemJ.getActiveVotes(userAccount, newestPermlink);
-                    boolean botVotedOnThisPost = hasBotVotedOnThisPost(accountName, activeVotes);
+                    boolean botVotedOnThisPost = BotActions.hasBotVotedOnThisPost(accountName, activeVotes);
                     if (botVotedOnThisPost) {
                         continue;
                     }
 
                     System.out.println("Checking account " + userAccountName);
-                    String lastUserPost = Main.currentSeenUsersPosts.get(userAccountName);
+                    String lastUserPost = BotActions.getCurrentSeenUsersPosts().get(userAccountName);
                     String permlinkText = newestPermlink.getLink();
-                    if (lastUserPost != null && !lastUserPost.isEmpty()) {
-                        if (permlinkText.equals(lastUserPost)) {
-                            continue;
-                        }
-                    }
-                    if (isMaxOneVote) {
-                        Long lastVoteTime = lastVotedUser.get(userAccountName);
-                        if (lastVoteTime != null) {
-                            long now = System.currentTimeMillis();
-                            long diff = now - lastVoteTime;
-                            int h24 = 1000 * 60 * 60 * 24;
-                            if (diff < h24) {
-                                System.out.println("less than 24h@");
-                                continue;
-                            }
-                        }
-                        lastVotedUser.put(userAccountName, System.currentTimeMillis());
+                    if (BotActions.alreadyPosted(lastUserPost, permlinkText)) continue;
+                    if (isMaxOneVotePerCertainTime) {
+                        if (!canBeVoted(userAccountName)) continue;
                     }
 
+                    BotActions.getLastVotedUser().put(userAccountName, System.currentTimeMillis());
                     System.out.println("Voting on " + userAccountName);
 
                     float votingPower = extendedBotAccount.getVotingPower() / 100;
@@ -216,20 +191,21 @@ public class Main {
                     short votingStrength = user.getVotingStrength(votingPower);
                     System.out.println("I received " + votingStrength + " voting strength!");
                     try {
-                        System.out.println("Im voting on " + permlinkText + " with power " + votingStrength);
-                        steemJ.vote(botAccount, userAccount, newestPermlink, votingStrength);
-                        Main.currentSeenUsersPosts.put(userAccountName, permlinkText);
-                        String votedMsg = "Successfully voted on " + userAccountName + " post " + permlinkText;
-                        System.out.println(votedMsg);
-                        writeLog("bot.log", votedMsg);
-                        message = message.replaceAll("<author>", userAccountName);
-                        steemJ.createComment(botAccount, userAccount, newestPermlink, message, commentTags);
-                    } catch (SteemResponseException | SteemCommunicationException ex) {
-                        System.out.println("Errow while responding action toward " + userAccountName + " on steem waiting!");
+                        BotActions.vote(steemJ, botAccount, userAccount, userAccountName, newestPermlink, permlinkText, votingStrength);
                     } catch (SteemInvalidTransactionException e) {
-                        e.printStackTrace();
+                        System.out.println("Errow while responding action toward " + userAccountName + " on steem waiting!");
+                        continue;
                     }
-                }
+                    if (commentEnabled) {
+                        message = message.replaceAll("<author>", userAccountName);
+                        try {
+                            BotActions.comment(steemJ, botAccount, message, commentTags, userAccount, newestPermlink);
+                        } catch (SteemInvalidTransactionException e) {
+                            System.out.println("Errow while responding action toward " + userAccountName + " on steem waiting!");
+                            continue;
+                        }
+                    }
+                 }
                 Thread.sleep(frequenceCheckInMilliseconds);
             } catch (InterruptedException ex) {
                 try {
@@ -249,7 +225,46 @@ public class Main {
         }
     }
 
-    private static void writeLog(String fileName, String textToWrite) {
+    private static boolean canBeVoted(String userAccountName) {
+        long lastVoteTime = BotActions.getLastVotedUser().get(userAccountName);
+        int h24 = 1000 * 60 * 60 * 24;
+        return !isAfterCertainTime(lastVoteTime, h24);
+    }
+
+    private static List<AccountName> addAccountsToProcess(HashMap<String, User> users) {
+        List<AccountName> steemUsernames = new ArrayList<>();
+        for (String username : users.keySet()) {
+            System.out.println("Adding " + username + " to checkList");
+            steemUsernames.add(new AccountName(username));
+        }
+        return steemUsernames;
+    }
+
+    private static boolean hasPostValidTag(User user, Discussion content) {
+        String jsonMetadata = content.getJsonMetadata();
+        //System.out.println("Discussion " + content.getTitle());
+        JSONObject jsonObject = new JSONObject(jsonMetadata);
+        JSONArray jsonArray = (JSONArray) jsonObject.get("tags");
+        boolean isEligiblePost = isEligiblePost(user, jsonArray);
+        if (isEligiblePost) {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isAfterCertainTime(Long lastVoteTime, int h24) {
+        if (lastVoteTime != null) {
+            long now = System.currentTimeMillis();
+            long diff = now - lastVoteTime;
+            if (diff < h24) {
+                System.out.println("less than 24h@");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void writeLog(String fileName, String textToWrite) {
         try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
             out.println(textToWrite);
         } catch (IOException e) {
@@ -265,41 +280,6 @@ public class Main {
             }
         }
         return isEligiblePost;
-    }
-
-    private static Discussion getlatestPost(AccountName accountName, List<Discussion> newestDiscusions) throws Exception {
-        for (Discussion interaterdDiscussion : newestDiscusions) {
-            System.out.println("Looking at " + interaterdDiscussion.getPermlink().getLink());
-            if (interaterdDiscussion.getAuthor().equals(accountName)) {
-                return interaterdDiscussion;
-            }
-        }
-        throw new Exception("No post found");
-    }
-
-    private static boolean hasBotVotedOnThisPost(AccountName botAccount, List<VoteState> activeVotes) {
-        boolean botVotedOnThisPost = false;
-        for (VoteState vote : activeVotes) {
-            AccountName voterAccountName = vote.getVoter();
-            if (botAccount.getName().equals(voterAccountName.getName())) {
-                botVotedOnThisPost = true;
-            }
-        }
-        return botVotedOnThisPost;
-    }
-
-
-    private static Permlink getNewestDiscusion(SteemJ steemJ, AccountName author, List<String> tags) throws Exception {
-        List<BlogEntry> blogEntries = steemJ.getBlogEntries(author, 0, (short) 50);
-        if (blogEntries.size() == 0) {
-            throw new Exception("");
-        }
-        for (BlogEntry entry : blogEntries) {
-            if (entry.getAuthor().equals(author)) {
-                return entry.getPermlink();
-            }
-        }
-        throw new Exception("");
     }
 
 
