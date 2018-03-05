@@ -23,12 +23,7 @@ public class BotActions {
 
 
     public static boolean alreadyPosted(String lastUserPost, String permlinkText) {
-        if (lastUserPost != null && !lastUserPost.isEmpty()) {
-            if (permlinkText.equals(lastUserPost)) {
-                return true;
-            }
-        }
-        return false;
+        return lastUserPost != null && !lastUserPost.isEmpty() && permlinkText.equals(lastUserPost);
     }
 
     public static void comment(SteemJ steemJ, AccountName botAccount, String message, String[] commentTags, AccountName userAccount, Permlink newestPermlink) throws SteemCommunicationException, SteemResponseException, SteemInvalidTransactionException {
