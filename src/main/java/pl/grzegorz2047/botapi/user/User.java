@@ -1,5 +1,6 @@
 package pl.grzegorz2047.botapi.user;
 
+import eu.bittrade.libs.steemj.base.models.AccountName;
 import pl.grzegorz2047.botapi.interval.Interval;
 import pl.grzegorz2047.botapi.interval.IntervalHandler;
 
@@ -7,6 +8,7 @@ import java.util.List;
 
 public class User {
     private final String username;
+    private final AccountName accountName;
     private IntervalHandler intervalHandler;
     private final List<String> followingTags;
 
@@ -14,6 +16,7 @@ public class User {
         this.username = username;
         this.intervalHandler = intervalHandler;
         this.followingTags = followingTags;
+        accountName = new AccountName(username);
     }
 
     public List<Interval> getIntervals() {
@@ -30,5 +33,9 @@ public class User {
 
     public String getUsername() {
         return username;
+    }
+
+    public AccountName getAccountNameObj() {
+        return accountName;
     }
 }

@@ -12,6 +12,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import pl.grzegorz2047.botapi.bot.BotActions;
+import pl.grzegorz2047.botapi.bot.SimpleFileCreator;
+import pl.grzegorz2047.botapi.bot.UsersLoader;
 import pl.grzegorz2047.botapi.configuration.GlobalConfigurationLoader;
 import pl.grzegorz2047.botapi.interval.Interval;
 import pl.grzegorz2047.botapi.interval.IntervalHandler;
@@ -21,10 +23,7 @@ import pl.grzegorz2047.botapi.user.User;
 import pl.grzegorz2047.botapi.user.UserDataLoader;
 import pl.grzegorz2047.botapi.user.exception.PropertiesNotFound;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,7 +34,7 @@ public class Main {
 
 
     public static void main(String[] args) throws SteemResponseException, SteemCommunicationException {
-     /*   Properties globalProperties;
+        Properties globalProperties;
         GlobalConfigurationLoader properties = new GlobalConfigurationLoader();
         try {
             if (!properties.prepareGlobalProperties()) {
@@ -43,7 +42,7 @@ public class Main {
                 System.exit(0);
             }
         } catch (IOException e) {
-            System.out.println("There is an erro while creating global.properties file! Check you permissions!");
+            System.out.println("There is an error while creating global.properties file! Check you permissions!");
             System.exit(1);
             return;
         }
@@ -103,7 +102,85 @@ public class Main {
         String commentTags = globalConfigData.getCommentTags();
         String[] listOfCommentTags = commentTags.split(",");
         runBot(steemJ, users, globalConfigData.getFrequenceCheckInMilliseconds(), botAccount, globalConfigData.isCheckTagsEnabled(), isMaxOneVotePerCertainTime, globalConfigData.getCommentMessage(), listOfCommentTags, globalConfigData.isCOmmentingEnabled());
-    */}
+        /* New bots */
+        newBots();
+
+
+    }
+
+    private static void newBots() {
+        String botDataPath = "UpVoter";
+        String globalFilePath = botDataPath + File.separator + "global.properties";
+        Properties globalProperties = getGlobalProperties(globalFilePath);
+        String usersFilePath = botDataPath + File.separator + "users.txt";
+        createTxtFiles(usersFilePath);
+        GlobalConfigData globalConfigData = new GlobalConfigData(globalProperties);
+        IntervalParser intervalParser = new IntervalParser();
+
+        IntervalHandler globalIntervalHandler = getIntervalHandler(globalConfigData, intervalParser);
+
+
+        HashMap<String, User> users = new HashMap<>();
+        try {
+            List<String> votingTags = new VotingTagsParser().getVotingTags(globalProperties);
+            users = new UsersLoader().getUsers(globalIntervalHandler, votingTags, usersFilePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+
+        }
+
+        if (users.isEmpty()) {
+            System.out.println("No users added! Bot cannot continue working! Turning off!");
+            System.exit(0);
+
+        }
+    }
+    private static Properties getGlobalProperties(String globalFilePath) {
+        Properties globalProperties = null;
+        GlobalConfigurationLoader propertiesLoader = new GlobalConfigurationLoader(globalFilePath);
+        try {
+            if (!propertiesLoader.prepareGlobalProperties()) {
+                System.out.println("File global.properties generated! configure bot before you run a bot!");
+                System.exit(0);
+            }
+        } catch (IOException e) {
+            System.out.println("There is an error while creating global.properties file! Check you permissions!");
+            System.exit(1);
+        }
+        try {
+            globalProperties = propertiesLoader.getGlobalProperties();
+        } catch (PropertiesNotFound propertiesNotFound) {
+            System.out.println("There is an error while getting informations from global.properties file! Check you permissions!");
+            propertiesNotFound.printStackTrace();
+            System.exit(1);
+        }
+        return globalProperties;
+    }
+
+    private static void createTxtFiles(String usersFilePath) {
+        SimpleFileCreator simpleFileCreator = new SimpleFileCreator();
+        Path usersPath = Paths.get(usersFilePath);
+        try {
+            if (simpleFileCreator.createFile(usersPath)) {
+                System.out.println(usersFilePath + " generated! Add users before you run a bot!");
+                System.exit(0);
+            }
+        } catch (IOException e) {
+            System.out.println(usersPath + " cannot be created! Check if you have proper permissions!");
+            System.exit(1);
+        }
+    }
+
+
+    private static IntervalHandler getIntervalHandler(GlobalConfigData globalConfigData, IntervalParser intervalParser) {
+        IntervalHandler globalIntervalHandler = new IntervalHandler(intervalParser.parse(globalConfigData.getGlobalIntervals()));
+        System.out.println("parsuje " + globalConfigData.getGlobalIntervals());
+        float votingStrengthPercentageBasedOnCurrentVotingPower = globalIntervalHandler.getVotingStrengthPercentageBasedOnCurrentVotingPower(77);
+        System.out.println("loaded intervals: " + globalIntervalHandler.getIntervals().size());
+        System.out.println("Vote power for 77 is " + votingStrengthPercentageBasedOnCurrentVotingPower);
+        return globalIntervalHandler;
+    }
 
     private static boolean createFile(Path usersPath) {
         if (!Files.exists(usersPath)) {
@@ -207,7 +284,7 @@ public class Main {
                             continue;
                         }
                     }
-                 }
+                }
                 Thread.sleep(frequenceCheckInMilliseconds);
             } catch (InterruptedException ex) {
                 try {

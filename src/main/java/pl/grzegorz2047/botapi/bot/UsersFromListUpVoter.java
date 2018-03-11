@@ -6,21 +6,34 @@ import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
 import eu.bittrade.libs.steemj.exceptions.SteemInvalidTransactionException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
+import pl.grzegorz2047.botapi.GlobalConfigData;
 import pl.grzegorz2047.botapi.bot.actions.exceptions.InsufficentArgumensToActException;
 import pl.grzegorz2047.botapi.bot.argument.Argument;
 import pl.grzegorz2047.botapi.bot.exceptions.BotNotInitialisedException;
+import pl.grzegorz2047.botapi.bot.exceptions.CantGetFeedException;
 import pl.grzegorz2047.botapi.bot.interfaces.Bot;
 import pl.grzegorz2047.botapi.bot.interfaces.BotAction;
+import pl.grzegorz2047.botapi.bot.interfaces.HelpInformation;
+import pl.grzegorz2047.botapi.configuration.GlobalConfigurationLoader;
+import pl.grzegorz2047.botapi.interval.IntervalHandler;
+import pl.grzegorz2047.botapi.interval.IntervalParser;
 import pl.grzegorz2047.botapi.user.User;
+import pl.grzegorz2047.botapi.user.exception.PropertiesNotFound;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static java.lang.Thread.sleep;
 
-public class BotRandomUpVoter extends Thread implements Bot {
+public class UsersFromListUpVoter extends Thread implements Bot {
     private List<AccountName> usernames;//How to make it work on separate threads?
 
     private List<BotAction> botActions;
+    private List<HelpInformation> botFeed;
     private boolean running = false;
     private boolean initialized;
     private HashMap<String, User> users;
@@ -28,14 +41,15 @@ public class BotRandomUpVoter extends Thread implements Bot {
     private final AccountName botAccount;
     private HashMap<String, Argument> botArguments;
 
-    public BotRandomUpVoter(SteemJ steemJ, AccountName botAccount) throws SteemResponseException, SteemCommunicationException {
+    public UsersFromListUpVoter(SteemJ steemJ, AccountName botAccount) {
         this.botAccount = botAccount;
         this.steemJ = steemJ;
     }
 
     @Override
-    public boolean init(HashMap<String, User> users, List<BotAction> botActions, HashMap<String, Argument> arguments) {
+    public boolean init(HashMap<String, User> users, List<HelpInformation> botFeed, List<BotAction> botActions, HashMap<String, Argument> arguments) {
         this.users = users;
+        this.botFeed = botFeed;
         this.botActions = botActions;
         this.botArguments = arguments;
         this.usernames = addAccountsToProcess(users);
@@ -43,10 +57,11 @@ public class BotRandomUpVoter extends Thread implements Bot {
         if (users == null || botActions == null) {
             return false;
         }
-        this.initialized = true;
-        return initialized;
-    }
 
+
+        this.initialized = true;
+        return true;
+    }
 
     @Override
     public void run() {
@@ -111,7 +126,12 @@ public class BotRandomUpVoter extends Thread implements Bot {
             AccountName accountName = extendedBotAccount.getName();
             List<ExtendedAccount> filledAccounts = steemJ.getAccounts(steemUsernames);
             for (ExtendedAccount userActivityAccount : filledAccounts) {
-                doForUser(botArguments, steemJ, userActivityAccount);
+                try {
+                    doForUser(botArguments, steemJ, userActivityAccount);
+                } catch (CantGetFeedException | InsufficentArgumensToActException | SteemInvalidTransactionException e) {
+                    System.out.println("Msg: " + e.getMessage());
+                    System.out.println("Cause: " + e.getCause());
+                }
             }
             System.out.println("I looked at all accounts in this cycle!");
         } catch (SteemResponseException | SteemCommunicationException e) {
@@ -119,25 +139,30 @@ public class BotRandomUpVoter extends Thread implements Bot {
         }
     }
 
-    private void doForUser(HashMap<String, Argument> botArguments, SteemJ steemJ, ExtendedAccount userActivityAccount) throws SteemResponseException, SteemCommunicationException {
+    private void doForUser(HashMap<String, Argument> botArguments, SteemJ steemJ, ExtendedAccount userActivityAccount) throws SteemResponseException, SteemCommunicationException, CantGetFeedException, InsufficentArgumensToActException, SteemInvalidTransactionException {
         HashMap<String, Argument> userArguments = new HashMap<>(botArguments);
         //permlinks and etc
         //finding what?
         //add arguments here and do something cool
-        long reputation = userActivityAccount.getReputation();
+        String username = userActivityAccount.getName().getName();
+
+        HashMap<String, Argument> newFeed = getFeedForBot(botArguments, steemJ, username);
+        userArguments.putAll(newFeed);
+
         for (BotAction action : botActions) {
-            try {
-                LinkedList<String> requiredKeyProperties = action.getRequiredKeyProperties();
-                System.out.println("Acting!");
-                action.act(steemJ, userArguments);
-            } catch (SteemInvalidTransactionException e) {
-                System.out.println("exception " + e.getMessage());
-                e.printStackTrace();//How to react to this placa? If one of the actions fails then what? Rollback?
-            } catch (InsufficentArgumensToActException e) {
-                System.out.println("exception " + e.getMessage());
-                e.printStackTrace();
-            }
+            System.out.println("Acting!");
+            action.act(steemJ, userArguments);
         }
+    }
+
+    private HashMap<String, Argument> getFeedForBot(HashMap<String, Argument> botArguments, SteemJ steemJ, String username) throws CantGetFeedException {
+        HashMap<String, Argument> newFeed = new HashMap<>();
+        for (HelpInformation information : botFeed) {
+            HashMap<String, Argument> feed = information.feedBot(steemJ, users.get(username), botArguments);
+            newFeed.putAll(feed);
+
+        }
+        return newFeed;
     }
 
     private List<AccountName> addAccountsToProcess(HashMap<String, User> users) {

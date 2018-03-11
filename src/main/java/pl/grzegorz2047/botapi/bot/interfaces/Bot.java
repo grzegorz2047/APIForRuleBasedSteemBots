@@ -9,7 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public interface Bot {
-    boolean init(HashMap<String, User> users, List<BotAction> botActions, HashMap<String, Argument> arguments);
+    boolean init(HashMap<String, User> users, List<HelpInformation> botFeed, List<BotAction> botActions, HashMap<String, Argument> arguments);
 
     void start();
 

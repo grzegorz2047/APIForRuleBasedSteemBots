@@ -14,14 +14,22 @@ import java.util.Properties;
 public class GlobalConfigurationLoader {
 
     private Properties properties;
-    private final static String FILE_PATH = "global.properties";
+    private String filePath = "global.properties";
+
+    public GlobalConfigurationLoader() {
+    }
+
+    public GlobalConfigurationLoader(String filePath) {
+        this.filePath = filePath;
+    }
+
 
     void createGlobalProperties() throws IOException {
         Properties prop = new Properties();
         OutputStream output = null;
 
         try {
-            output = new FileOutputStream(FILE_PATH);
+            output = new FileOutputStream(filePath);
             prop.setProperty("votingTags", "test");
             prop.setProperty("botName", "yourbotAccountName");
             prop.setProperty("postingKey", "enteryourprivatepostingkey");
@@ -41,7 +49,6 @@ public class GlobalConfigurationLoader {
 
             // save properties to project root folder
             prop.store(output, null);
-
         } catch (IOException io) {
             io.printStackTrace();
         } finally {
@@ -56,7 +63,7 @@ public class GlobalConfigurationLoader {
     }
 
     public boolean prepareGlobalProperties() throws IOException {
-        Path pathToFile = Paths.get(FILE_PATH);
+        Path pathToFile = Paths.get(filePath);
         if (!fileExists(pathToFile)) {
             createGlobalProperties();
             return false;
@@ -74,6 +81,7 @@ public class GlobalConfigurationLoader {
             return properties;
         }
         PropertiesLoader propertiesLoader = new PropertiesLoader();
-        return propertiesLoader.loadPropertiesFromFile(FILE_PATH);
+        properties = propertiesLoader.loadPropertiesFromFile(filePath);
+        return properties;
     }
 }
