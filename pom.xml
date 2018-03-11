@@ -49,6 +49,12 @@
             <artifactId>junit-jupiter-api</artifactId>
             <version>RELEASE</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -84,7 +90,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>pl.grzegorz2047.botupvoter.Main</mainClass>
+                            <mainClass>pl.grzegorz2047.botapi.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
