@@ -14,19 +14,18 @@ import pl.grzegorz2047.botapi.bot.interfaces.BotRule;
 import pl.grzegorz2047.botapi.bot.actions.exceptions.InsufficentArgumensToActException;
 import pl.grzegorz2047.botapi.bot.argument.Argument;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class UpVoteAction implements BotAction {
 
+    private final ActionProcessor actionProcessor = new ActionProcessor();
     private HashMap<String, BotRule> botRules = new HashMap<>();
 
     @Override
     public boolean act(SteemJ steemJ, HashMap<String, Argument> arguments) throws SteemResponseException, SteemCommunicationException, SteemInvalidTransactionException, InsufficentArgumensToActException {
+        HashMap<String, Argument> actionArguments = new HashMap<>(arguments);
         if (!arguments.keySet().containsAll(getRequiredKeyProperties())) {
-            throw new InsufficentArgumensToActException("You dont have all required arguments to act! requirements are " + Arrays.toString(getRequiredKeyProperties().toArray()));
+            throw new InsufficentArgumensToActException("You dont have all required arguments to act! Current keys: " + Arrays.toString(arguments.keySet().toArray()) + " requirements are " + Arrays.toString(getRequiredKeyProperties().toArray()));
         }
         Argument permlinkArg = arguments.get("permlink");
         Argument botAccountArg = arguments.get("botAccount");
@@ -42,31 +41,17 @@ public class UpVoteAction implements BotAction {
 
         List<VoteState> activeVotes = content.getActiveVotes();
 
-        hasBotVotedOnThisPost(new AccountName(botAccountArg.asString()), activeVotes);
+        final AccountName botAccount = new AccountName(botAccountArg.asString());
+        boolean hasBotVotedOnThisPost = actionProcessor.isBotOnVoterList(activeVotes, botAccount.getName());
+        actionArguments.put("votedbefore", new Argument(hasBotVotedOnThisPost));
         //Check if voted before
-        return canProceed(arguments) && vote(steemJ, new AccountName(botAccountArg.asString()), new AccountName(userAccountArg.asString()), new Permlink(permlinkArg.asString()), votingStrengthArg.asShort());
+        if (!actionProcessor.canProceed(actionArguments, botRules.values())) {
+            System.out.println("Rules broken. Cant proceed!");
+            return false;
+        }
+        return vote(steemJ, new AccountName(botAccountArg.asString()), new AccountName(userAccountArg.asString()), new Permlink(permlinkArg.asString()), votingStrengthArg.asShort());
     }
 
-    private boolean hasBotVotedOnThisPost(AccountName botAccount, List<VoteState> activeVotes) {
-        boolean botVotedOnThisPost = false;
-        for (VoteState vote : activeVotes) {
-            AccountName voterAccountName = vote.getVoter();
-            if (botAccount.getName().equals(voterAccountName.getName())) {
-                botVotedOnThisPost = true;
-            }
-        }
-        return botVotedOnThisPost;
-    }
-
-    private boolean canProceed(HashMap<String, Argument> arguments) {
-        for (BotRule rule : botRules.values()) {
-            boolean ok = rule.checkCondition(arguments);
-            if (!ok) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     private boolean vote(SteemJ steemJ, AccountName botAccount, AccountName userAccount, Permlink newestPermlink, short votingStrength) throws SteemCommunicationException, SteemResponseException, SteemInvalidTransactionException {
 
@@ -78,7 +63,7 @@ public class UpVoteAction implements BotAction {
         String votedMsg = "Successfully voted on " + userAccount.getName() + " post " + newestPermlink.getLink();
         System.out.println(votedMsg);
         return true;
-        //Main.writeLog("bot.log", votedMsg);
+        //OldMain.writeLog("bot.log", votedMsg);
     }
 
 

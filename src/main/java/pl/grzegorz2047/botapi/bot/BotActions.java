@@ -9,7 +9,7 @@ import eu.bittrade.libs.steemj.base.models.VoteState;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
 import eu.bittrade.libs.steemj.exceptions.SteemInvalidTransactionException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
-import pl.grzegorz2047.botapi.Main;
+import pl.grzegorz2047.botapi.OldMain;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +36,7 @@ public class BotActions {
         currentSeenUsersPosts.put(userAccountName, permlinkText);
         String votedMsg = "Successfully voted on " + userAccountName + " post " + permlinkText;
         System.out.println(votedMsg);
-        Main.writeLog("bot.log", votedMsg);
+        OldMain.writeLog("bot.log", votedMsg);
     }
 
     static Discussion getlatestPost(AccountName accountName, List<Discussion> newestDiscusions) throws Exception {

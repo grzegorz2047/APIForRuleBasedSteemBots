@@ -25,4 +25,8 @@ public class Argument {
     public short asShort() {
         return Short.valueOf(String.valueOf(arg));
     }
+
+    public boolean asBoolean() {
+        return Boolean.parseBoolean(String.valueOf(arg));
+    }
 }

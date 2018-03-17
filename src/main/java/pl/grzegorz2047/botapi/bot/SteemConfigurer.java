@@ -13,7 +13,7 @@ public class SteemConfigurer {
     public SteemConfigurer() {
     }
 
-    static SteemJConfig configureSteemJ(String botName, String postingKey) {
+    public static SteemJConfig configureSteemJ(String botName, String postingKey) {
         SteemJConfig steemJConfig = SteemJConfig.getInstance();
         steemJConfig.setResponseTimeout(100000);
         AccountName botAccount = new AccountName(botName);

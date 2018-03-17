@@ -22,10 +22,10 @@ import java.util.*;
 import static java.lang.Thread.sleep;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class UsersFromListUpVoterTest {
+public class BotUpVoterUsersFromListTest {
 
     private final SteemConfigurer steemConfigurer = new SteemConfigurer();
-    private UsersFromListUpVoter usersFromListUpVoter;
+    private BotUpVoterUsersFromList botUpVoterUsersFromList;
     private List<BotAction> botActions = new LinkedList<>();
     private List<HelpInformation> botFeed = new LinkedList<>();
     private HashMap<String, User> users = new HashMap<>();
@@ -33,50 +33,53 @@ public class UsersFromListUpVoterTest {
     private final SteemJConfig steemConfig = SteemConfigurer.configureSteemJ("fajter", "5JjRX3s46K8P7PYcqmcu9KCMjGQJcaaD6hAV9LYM2x36zVQPCY3");
     private final SteemJ steemJ = new SteemJ();
 
-    public UsersFromListUpVoterTest() throws SteemResponseException, SteemCommunicationException {
+    public BotUpVoterUsersFromListTest() throws SteemResponseException, SteemCommunicationException {
     }
 
 
     @Before
     public void setUp() throws Exception {
-        usersFromListUpVoter = new UsersFromListUpVoter(steemJ, steemConfig.getDefaultAccount());
+        botUpVoterUsersFromList = new BotUpVoterUsersFromList(steemJ, steemConfig.getDefaultAccount());
         users.put("fajter", new User("fajter", new IntervalHandler(new ArrayList<>()), Collections.singletonList("dontblameme")));
         botFeed.add(new NewestUserPostInformation());
-        boolean on = usersFromListUpVoter.init(users, botFeed, botActions, arguments);
+        UpVoteAction upVoteAction = new UpVoteAction();
+        upVoteAction.addRule("didvotebefore", new NeverVotedBeforeRule());
+
+        botActions.add(upVoteAction);
+        CommentAction commentAction = new CommentAction(steemJ, steemConfig.getDefaultAccount());
+        commentAction.addRule("didpostbefore", new NeverVotedBeforeRule());
+        botActions.add(commentAction);
+
+        boolean on = botUpVoterUsersFromList.init(users, botFeed, botActions, arguments);
         if (!on) {
             throw new Exception("error");
         }
-        UpVoteAction upVoteAction = new UpVoteAction();
-        botActions.add(upVoteAction);
-        CommentAction commentAction = new CommentAction(steemJ, steemConfig.getDefaultAccount());
-        commentAction.addRule("neverpostedbefore", new NeverVotedBeforeRule());
-        botActions.add(commentAction);
     }
 
     @Test
     public void init() {
-        boolean on = usersFromListUpVoter.init(users, botFeed, botActions, arguments);
+        boolean on = botUpVoterUsersFromList.init(users, botFeed, botActions, arguments);
         assertThat(on).isTrue();
     }
 
     @Test
     public void shutdown() {
-        boolean off = usersFromListUpVoter.shutdown();
+        boolean off = botUpVoterUsersFromList.shutdown();
         assertThat(off).isTrue();
     }
 
     @Test
     public void checkStatus() throws SteemResponseException, SteemCommunicationException {
-        usersFromListUpVoter = new UsersFromListUpVoter(steemJ, steemConfig.getDefaultAccount());
-        boolean off = usersFromListUpVoter.checkStatus();
+        botUpVoterUsersFromList = new BotUpVoterUsersFromList(steemJ, steemConfig.getDefaultAccount());
+        boolean off = botUpVoterUsersFromList.checkStatus();
         assertThat(off).isFalse();
-        boolean on = usersFromListUpVoter.init(users, botFeed, botActions, arguments);
+        boolean on = botUpVoterUsersFromList.init(users, botFeed, botActions, arguments);
         assertThat(on).isTrue();
     }
 
     @Test
     public void runBot() throws InterruptedException {
-        System.out.println(Arrays.toString(usersFromListUpVoter.getAllRequiredKeyProperties().toArray()));
+        System.out.println(Arrays.toString(botUpVoterUsersFromList.getAllRequiredKeyProperties().toArray()));
         arguments.put("commentMessage", new Argument("YO MAN!"));
         arguments.put("permlink", new Argument("hello-world"));
         arguments.put("commentTags", new Argument("dontblameme"));
@@ -84,14 +87,15 @@ public class UsersFromListUpVoterTest {
         arguments.put("userAccount", new Argument("fajter"));
         arguments.put("botAccount", new Argument("fajter"));
         arguments.put("votingStrength", new Argument("100"));
-        usersFromListUpVoter.start();
-        sleep(1000 * 30);
-        //usersFromListUpVoter.shutdown();
+        arguments.put("votedbefore", new Argument(true));
+        botUpVoterUsersFromList.start();
+        sleep(1000 * 40);
+        //botUpVoterUsersFromList.shutdown();
     }
 
     @Test
     public void printAllActions() throws BotNotInitialisedException {
-        usersFromListUpVoter.printAllActions();
+        botUpVoterUsersFromList.printAllActions();
         botActions.clear();
     }
 }
