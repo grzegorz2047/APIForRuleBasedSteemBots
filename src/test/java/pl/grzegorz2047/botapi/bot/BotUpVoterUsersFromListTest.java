@@ -13,7 +13,7 @@ import pl.grzegorz2047.botapi.bot.exceptions.BotNotInitialisedException;
 import pl.grzegorz2047.botapi.bot.helpinformations.NewestUserPostInformation;
 import pl.grzegorz2047.botapi.bot.interfaces.BotAction;
 import pl.grzegorz2047.botapi.bot.interfaces.HelpInformation;
-import pl.grzegorz2047.botapi.bot.rules.NeverVotedBeforeRule;
+import pl.grzegorz2047.botapi.bot.rules.NeverVotedBeforeOnPostRule;
 import pl.grzegorz2047.botapi.interval.IntervalHandler;
 import pl.grzegorz2047.botapi.user.User;
 
@@ -43,11 +43,11 @@ public class BotUpVoterUsersFromListTest {
         users.put("fajter", new User("fajter", new IntervalHandler(new ArrayList<>()), Collections.singletonList("dontblameme")));
         botFeed.add(new NewestUserPostInformation());
         UpVoteAction upVoteAction = new UpVoteAction();
-        upVoteAction.addRule("didvotebefore", new NeverVotedBeforeRule());
+        upVoteAction.addRule("didvotebefore", new NeverVotedBeforeOnPostRule());
 
         botActions.add(upVoteAction);
-        CommentAction commentAction = new CommentAction(steemJ, steemConfig.getDefaultAccount());
-        commentAction.addRule("didpostbefore", new NeverVotedBeforeRule());
+        CommentAction commentAction = new CommentAction();
+        commentAction.addRule("didpostbefore", new NeverVotedBeforeOnPostRule());
         botActions.add(commentAction);
 
         boolean on = botUpVoterUsersFromList.init(users, botFeed, botActions, arguments);
@@ -82,14 +82,14 @@ public class BotUpVoterUsersFromListTest {
         System.out.println(Arrays.toString(botUpVoterUsersFromList.getAllRequiredKeyProperties().toArray()));
         arguments.put("commentMessage", new Argument("YO MAN!"));
         arguments.put("permlink", new Argument("hello-world"));
-        arguments.put("commentTags", new Argument("dontblameme"));
+        arguments.put("votingTags", new Argument("dontblameme"));
         arguments.put("authorToCommentOn", new Argument("fajter"));
         arguments.put("userAccount", new Argument("fajter"));
-        arguments.put("botAccount", new Argument("fajter"));
+        arguments.put("botName", new Argument("fajter"));
         arguments.put("votingStrength", new Argument("100"));
-        arguments.put("votedbefore", new Argument(true));
+        arguments.put("votedBefore", new Argument(true));
         botUpVoterUsersFromList.start();
-        sleep(1000 * 40);
+        sleep(1000 * 20);
         //botUpVoterUsersFromList.shutdown();
     }
 

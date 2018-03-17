@@ -9,6 +9,7 @@ import pl.grzegorz2047.botapi.bot.argument.Argument;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Set;
 
 public interface BotAction {
 
@@ -21,6 +22,7 @@ public interface BotAction {
     String toString();
 
     LinkedList<String> getRequiredKeyProperties();
+    LinkedList<String> getRequiredRuntimeKeyProperties();
 
-    String printAllRules();
+    Set<String> printAllRules();
 }

@@ -1,6 +1,5 @@
 package pl.grzegorz2047.botapi.bot.actions;
 
-import com.google.common.collect.Lists;
 import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.apis.database.models.state.Discussion;
 import eu.bittrade.libs.steemj.base.models.AccountName;
@@ -27,14 +26,17 @@ public class UpVoteAction implements BotAction {
         if (!arguments.keySet().containsAll(getRequiredKeyProperties())) {
             throw new InsufficentArgumensToActException("You dont have all required arguments to act! Current keys: " + Arrays.toString(arguments.keySet().toArray()) + " requirements are " + Arrays.toString(getRequiredKeyProperties().toArray()));
         }
+
+        if (!arguments.keySet().containsAll(getRequiredRuntimeKeyProperties())) {
+            throw new InsufficentArgumensToActException("You dont have all required runtime arguments to act! (bot still hungry of knowledge!) Current keys: " + Arrays.toString(arguments.keySet().toArray()) + " requirements are " + Arrays.toString(getRequiredRuntimeKeyProperties().toArray()));
+        }
         Argument permlinkArg = arguments.get("permlink");
-        Argument botAccountArg = arguments.get("botAccount");
+        Argument botAccountArg = arguments.get("botName");
         Argument userAccountArg = arguments.get("userAccount");
         Argument votingStrengthArg = arguments.get("votingStrength");
 
         if (permlinkArg == null || userAccountArg == null || votingStrengthArg == null) {
-            System.out.println("Arguments contain null!");
-            return false;
+            throw new InsufficentArgumensToActException("Arguments contain null!");
         }
 
         Discussion content = steemJ.getContent(new AccountName(userAccountArg.asString()), new Permlink(permlinkArg.asString()));
@@ -85,24 +87,33 @@ public class UpVoteAction implements BotAction {
         return false;
     }
 
-
     @Override
     public LinkedList<String> getRequiredKeyProperties() {
-        LinkedList<String> requiredKeys = new LinkedList<>();
-        requiredKeys.add("botAccount");
-        requiredKeys.add("userAccount");
-        requiredKeys.add("votingStrength");
-        requiredKeys.add("permlink");
-        for (BotRule rule : botRules.values()) {
-            String[] requiredKeyProperties = rule.getRequiredKeyProperties();
-            requiredKeys.addAll(Lists.newArrayList(requiredKeyProperties));
+        LinkedList<String> finalRequirements = new LinkedList<>(Arrays.asList("botName"));
+        for (Map.Entry<String, BotRule> botRule : botRules.entrySet()) {
+            LinkedList<String> requiredKeyProperties = botRule.getValue().getRequiredKeyProperties();
+            finalRequirements.removeAll(requiredKeyProperties);
+            finalRequirements.addAll(requiredKeyProperties);
         }
-        return requiredKeys;
+
+        return finalRequirements;
     }
 
     @Override
-    public String printAllRules() {
+    public LinkedList<String> getRequiredRuntimeKeyProperties() {
+        LinkedList<String> finalRequirements = new LinkedList<>(Arrays.asList("permlink", "userAccount", "votingStrength"));
+        for (Map.Entry<String, BotRule> botRule : botRules.entrySet()) {
+            LinkedList<String> requiredKeyProperties = botRule.getValue().getRequiredRuntimeKeyProperties();
+            finalRequirements.removeAll(requiredKeyProperties);
+            finalRequirements.addAll(requiredKeyProperties);
+        }
+        return finalRequirements;
+    }
 
-        return null;
+
+    @Override
+    public Set<String> printAllRules() {
+
+        return botRules.keySet();
     }
 }

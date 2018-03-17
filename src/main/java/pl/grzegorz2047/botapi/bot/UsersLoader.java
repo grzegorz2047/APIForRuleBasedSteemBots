@@ -30,7 +30,7 @@ public class UsersLoader {
             try {
                 UserDataLoader userDataLoader = new UserDataLoader(username);
                 userProperties = userDataLoader.getUserProperties();
-                votingTags = new VotingTagsParser().getVotingTags(userProperties);
+                votingTags = new VotingTagsParser().getVotingTags(userProperties.getProperty("votingTags"));
             } catch (PropertiesNotFound propertiesNotFound) {
                 votingTags = new ArrayList<String>();
             }

@@ -6,27 +6,33 @@ import pl.grzegorz2047.botapi.bot.interfaces.BotRule;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 
-public class NeverVotedBeforeRule implements BotRule {
+public class NeverVotedBeforeOnPostRule implements BotRule {
 
     @Override
     public boolean breaks(HashMap<String, Argument> args) throws InsufficentArgumensToActException {
-        Argument votedbefore = args.get("votedbefore");
+        Argument votedbefore = args.get("votedBefore");
         if (votedbefore == null) {
-            throw new InsufficentArgumensToActException("votedbefore doesnt exist!");
+            throw new InsufficentArgumensToActException("votedBefore doesnt exist!");
         }
         System.out.println("VotedBefore is " + votedbefore.asString());
         return votedbefore.asBoolean();
     }
 
     @Override
-    public String[] getRequiredKeyProperties() {
-        return new String[]{"votedbefore"};
+    public LinkedList<String> getRequiredKeyProperties() {
+        return new LinkedList<>();
+    }
+
+    @Override
+    public LinkedList<String> getRequiredRuntimeKeyProperties() {
+        return new LinkedList<>(Arrays.asList("votedBefore"));
     }
 
     @Override
     public String toString() {
-        return "requiredKeyProperties=" + Arrays.toString(getRequiredKeyProperties());
+        return "getRequiredRuntimeKeyProperties=" + Arrays.toString(getRequiredRuntimeKeyProperties().toArray());
     }
 
 }

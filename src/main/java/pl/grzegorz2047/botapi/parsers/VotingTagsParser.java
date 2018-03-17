@@ -3,10 +3,9 @@ package pl.grzegorz2047.botapi.parsers;
 import java.util.*;
 
 public class VotingTagsParser {
-     public List<String> getVotingTags(Properties userProperties) {
+     public List<String> getVotingTags(String votingTagsString) {
         List<String> votingTags = new ArrayList<String>();
-        String votingTagsString = userProperties.getProperty("votingTags");
-        if (votingTagsString == null) {
+         if (votingTagsString == null) {
             return votingTags;
         }
         if (!votingTagsString.isEmpty()) {

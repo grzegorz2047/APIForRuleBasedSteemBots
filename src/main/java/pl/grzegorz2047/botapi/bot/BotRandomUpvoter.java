@@ -2,7 +2,6 @@ package pl.grzegorz2047.botapi.bot;
 
 import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.base.models.AccountName;
-import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
 import eu.bittrade.libs.steemj.exceptions.SteemInvalidTransactionException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
@@ -18,9 +17,7 @@ import pl.grzegorz2047.botapi.user.User;
 
 import java.util.*;
 
-import static java.lang.Thread.sleep;
-
-public class BotUpVoterUsersFromList extends Thread implements Bot {
+public class BotRandomUpvoter extends Thread implements Bot {
     private List<AccountName> usernames;//How to make it work on separate threads?
 
     private List<BotAction> botActions;
@@ -32,7 +29,7 @@ public class BotUpVoterUsersFromList extends Thread implements Bot {
     private final AccountName botAccount;
     private HashMap<String, Argument> botArguments;
 
-    public BotUpVoterUsersFromList(SteemJ steemJ, AccountName botAccount) {
+    public BotRandomUpvoter(SteemJ steemJ, AccountName botAccount) {
         this.botAccount = botAccount;
         this.steemJ = steemJ;
     }
@@ -56,10 +53,12 @@ public class BotUpVoterUsersFromList extends Thread implements Bot {
 
     @Override
     public void run() {
+        Argument millisecondsArgument = botArguments.get("frequenceCheckInMilliseconds");
+        long frequenceCheckInMilliseconds = millisecondsArgument.asLong();
         while (running) {
-            doWork(botArguments, steemJ, usernames);
+            voteOnLuckyHuman();
             try {
-                sleep(1000 * 120);
+                sleep(frequenceCheckInMilliseconds);
                 System.out.println("Sleeping!");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -98,54 +97,50 @@ public class BotUpVoterUsersFromList extends Thread implements Bot {
 
     @Override
     public LinkedList<String> getAllRequiredKeyProperties() {
-        LinkedList<String> requiredKeyProperties = new LinkedList<>();
+        LinkedList<String> requiredKeyProperties = new LinkedList<>(Arrays.asList("botName", "frequenceCheckInMilliseconds"));
         for (BotAction action : botActions) {
             requiredKeyProperties.addAll(action.getRequiredKeyProperties());
+        }
+        for (HelpInformation feed : botFeed) {
+            requiredKeyProperties.addAll(feed.getRequiredKeyProperties());
         }
         return requiredKeyProperties;
     }
 
-    private void doWork(HashMap<String, Argument> botArguments, SteemJ steemJ, List<AccountName> steemUsernames) {
+    private void voteOnLuckyHuman() {
         try {
             System.out.println("Starting to work!");
-
-            List<ExtendedAccount> filledAccounts = steemJ.getAccounts(steemUsernames);
-            for (ExtendedAccount userActivityAccount : filledAccounts) {
-                try {
-                    doForUser(botArguments, steemJ, userActivityAccount);
-                } catch (CantReceiveDataException | CantGetFeedException | InsufficentArgumensToActException | SteemInvalidTransactionException e) {
-                    System.out.println("Msg: " + e.getMessage());
-                    System.out.println("Cause: " + Arrays.toString(e.getStackTrace()));
-                }
+            try {
+                HashMap<String, Argument> newFeed = new HashMap<>(botArguments);
+                newFeed.putAll(getFeedForBot(steemJ));
+                takeProperActions(newFeed);
+            } catch (CantReceiveDataException | CantGetFeedException | InsufficentArgumensToActException | SteemInvalidTransactionException e) {
+                System.out.println("Msg: " + e.getMessage());
+                System.out.println("Cause: " + Arrays.toString(e.getStackTrace()));
             }
+
             System.out.println("I looked at all accounts in this cycle!");
         } catch (SteemResponseException | SteemCommunicationException e) {
             e.printStackTrace();
         }
+
     }
 
-    private void doForUser(HashMap<String, Argument> botArguments, SteemJ steemJ, ExtendedAccount userActivityAccount) throws SteemResponseException, SteemCommunicationException, CantGetFeedException, InsufficentArgumensToActException, SteemInvalidTransactionException, CantReceiveDataException {
-        HashMap<String, Argument> userArguments = new HashMap<>(botArguments);
-        //permlinks and etc
-        //finding what?
-        //add arguments here and do something cool
-        String username = userActivityAccount.getName().getName();
-
-        HashMap<String, Argument> newFeed = getFeedForBot(botArguments, steemJ);
-        userArguments.putAll(newFeed);
-        userArguments.put("userAccount", new Argument(username));
-
+    private void takeProperActions(HashMap<String, Argument> arguments) throws SteemResponseException, SteemCommunicationException, SteemInvalidTransactionException, InsufficentArgumensToActException {
         for (BotAction action : botActions) {
             System.out.println("Acting!");
-            action.act(steemJ, userArguments);
+            action.act(steemJ, arguments);
         }
     }
 
-    private HashMap<String, Argument> getFeedForBot(HashMap<String, Argument> botArguments, SteemJ steemJ) throws CantGetFeedException, SteemResponseException, CantReceiveDataException, SteemCommunicationException {
+
+    private HashMap<String, Argument> getFeedForBot(SteemJ steemJ) throws CantGetFeedException, SteemResponseException, CantReceiveDataException, SteemCommunicationException {
         HashMap<String, Argument> newFeed = new HashMap<>();
         for (HelpInformation information : botFeed) {
+            //User user = users.get(username);
             HashMap<String, Argument> feed = information.feedBot(steemJ, botArguments);
             newFeed.putAll(feed);
+
         }
         return newFeed;
     }

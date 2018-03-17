@@ -10,6 +10,7 @@ import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.Before;
 import org.junit.jupiter.api.Test;
+import pl.grzegorz2047.botapi.BotsPreparator;
 import pl.grzegorz2047.botapi.bot.actions.CommentAction;
 import pl.grzegorz2047.botapi.bot.interfaces.BotAction;
 
@@ -23,28 +24,10 @@ class CommentActionTest {
 
     private BotAction commentAction;
 
-    private SteemJConfig createSteemConfig(String botName, String postingKey) {
-        SteemJConfig steemJConfig = SteemJConfig.getInstance();
-        steemJConfig.setResponseTimeout(100000);
-        AccountName botAccount = new AccountName(botName);
-        steemJConfig.setDefaultAccount(botAccount);
-
-        steemJConfig.setSteemJWeight((short) 0);//https://github.com/marvin-we/steem-java-api-wrapper/blob/126c907c4d136d38d4e805153aae1457f0a8f5e6/core/src/main/java/eu/bittrade/libs/steemj/SteemJ.java#L3018 ????
-        List<ImmutablePair<PrivateKeyType, String>> privateKeys = new ArrayList<>();
-        privateKeys.add(new ImmutablePair<>(PrivateKeyType.POSTING, postingKey));
-
-        steemJConfig.getPrivateKeyStorage().addAccount(botAccount, privateKeys);
-        return steemJConfig;
-    }
 
     @Before
-    void setup() throws SteemResponseException, SteemCommunicationException {
-        SteemJ steemJ = new SteemJ();
-        SteemJConfig steemConfig = createSteemConfig("kumpel", "posting key");
-        CommentAction commentAction = new CommentAction(steemJ, steemConfig.getDefaultAccount());
-
-        //commentAction.setPostData();
-        this.commentAction = commentAction;
+    void setup() {
+        this.commentAction = new CommentAction();
     }
 
     @Test
@@ -64,10 +47,8 @@ class CommentActionTest {
     }
 
     @Test
-    void getRequiredKeyProperties() throws SteemResponseException, SteemCommunicationException {
-        SteemJ steemJ = new SteemJ();
-        SteemJConfig steemConfig = createSteemConfig("kumpel", "posting key");
-        CommentAction commentAction = new CommentAction(steemJ, steemConfig.getDefaultAccount());
+    void getRequiredKeyProperties() {
+        CommentAction commentAction = new CommentAction();
         LinkedList<String> requiredKeyProperties =
                 commentAction.
                         getRequiredKeyProperties();

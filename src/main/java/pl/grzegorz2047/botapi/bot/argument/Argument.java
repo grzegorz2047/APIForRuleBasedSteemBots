@@ -29,4 +29,17 @@ public class Argument {
     public boolean asBoolean() {
         return Boolean.parseBoolean(String.valueOf(arg));
     }
+
+    public long asLong() {
+        return Long.parseLong(String.valueOf(arg));
+    }
+
+    public String[] asArray(String split) {
+        return String.valueOf(arg).split(split);
+    }
+
+    public String[] castAsStringArray() {
+        return (String[]) arg;
+    }
+
 }

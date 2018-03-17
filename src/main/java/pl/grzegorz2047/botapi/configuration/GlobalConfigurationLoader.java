@@ -3,6 +3,7 @@ package pl.grzegorz2047.botapi.configuration;
 import pl.grzegorz2047.botapi.user.PropertiesLoader;
 import pl.grzegorz2047.botapi.user.exception.PropertiesNotFound;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,13 +30,17 @@ public class GlobalConfigurationLoader {
         OutputStream output = null;
 
         try {
+            File targetFile = new File(filePath);
+            File parent = targetFile.getParentFile();
+            if (!parent.exists() && !parent.mkdirs()) {
+                throw new IOException("Couldn't create dir: " + parent);
+            }
             output = new FileOutputStream(filePath);
             prop.setProperty("votingTags", "test");
             prop.setProperty("botName", "yourbotAccountName");
             prop.setProperty("postingKey", "enteryourprivatepostingkey");
             prop.setProperty("commentingEnabled", "false");
             prop.setProperty("message", "Welcome on this tag!");
-            prop.setProperty("commentTags", "welcome,first,bot,cool");
             prop.setProperty("frequenceCheckInMilliseconds", "1000");
             prop.setProperty("votingEnabled", "true");
             prop.setProperty("votingPower", "100");
