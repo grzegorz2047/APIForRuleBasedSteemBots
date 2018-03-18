@@ -56,13 +56,13 @@ public class BotRandomUpvoter extends Thread implements Bot {
         Argument millisecondsArgument = botArguments.get("frequenceCheckInMilliseconds");
         long frequenceCheckInMilliseconds = millisecondsArgument.asLong();
         while (running) {
-            voteOnLuckyHuman();
             try {
                 sleep(frequenceCheckInMilliseconds);
                 System.out.println("Sleeping!");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            voteOnLuckyHuman();
         }
     }
 

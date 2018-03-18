@@ -18,7 +18,7 @@ import pl.grzegorz2047.botapi.bot.interfaces.HelpInformation;
 
 import java.util.*;
 
-public class NewestPostInTagInformation implements HelpInformation {
+public class NewestPostInTagsInformation implements HelpInformation {
 
     private static Random random = new Random();
 
@@ -36,8 +36,24 @@ public class NewestPostInTagInformation implements HelpInformation {
         if (numberOfPosts == 0) {
             throw new CantReceiveDataException("No post found!");
         }
+
         int randomNumber = random.nextInt(numberOfPosts);
         Discussion fairRandomPost = discussions.get(randomNumber);
+        boolean isMoreThan3Point5Days = false;
+        int tries = 0;
+        do {
+            long currentEpoch = System.currentTimeMillis() / 1000;
+            long diffBetweenCreationInSeconds = currentEpoch - fairRandomPost.getCreated().getDateTimeAsTimestamp();
+            isMoreThan3Point5Days = diffBetweenCreationInSeconds >= 60 * 60 * 24 * 3.5;
+            if (isMoreThan3Point5Days) {
+                randomNumber = random.nextInt(numberOfPosts);
+                fairRandomPost = discussions.get(randomNumber);
+                tries++;
+                if (tries >= 10) {
+                    throw new CantReceiveDataException("Cant get fresh posts!");
+                }
+            }
+        } while (isMoreThan3Point5Days);
 
 
         AccountName author = fairRandomPost.getAuthor();

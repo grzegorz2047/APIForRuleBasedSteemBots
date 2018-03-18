@@ -12,7 +12,7 @@ import pl.grzegorz2047.botapi.bot.actions.CommentAction;
 import pl.grzegorz2047.botapi.bot.actions.UpVoteAction;
 import pl.grzegorz2047.botapi.bot.argument.Argument;
 import pl.grzegorz2047.botapi.bot.helpinformations.CurrentVotingBotCapabilitiesInformation;
-import pl.grzegorz2047.botapi.bot.helpinformations.NewestPostInTagInformation;
+import pl.grzegorz2047.botapi.bot.helpinformations.NewestPostInTagsInformation;
 import pl.grzegorz2047.botapi.bot.helpinformations.NewestUserPostInformation;
 import pl.grzegorz2047.botapi.bot.interfaces.BotAction;
 import pl.grzegorz2047.botapi.bot.interfaces.HelpInformation;
@@ -34,7 +34,7 @@ import java.util.*;
 public class BotsPreparator {
 
     void runAllBots() throws SteemResponseException, SteemCommunicationException {
-        prepareUpVoterBot(new SteemJ());
+        //prepareUpVoterBot(new SteemJ());
         prepareRandomUpVoterBot(new SteemJ());
     }
 
@@ -150,7 +150,7 @@ public class BotsPreparator {
         botActions.add(upVoteAction);
         botActions.add(new CommentAction());
 
-        botFeed.add(new NewestPostInTagInformation());
+        botFeed.add(new NewestPostInTagsInformation());
         botFeed.add(new CurrentVotingBotCapabilitiesInformation());
 
         botRandomUpvoter.init(users, botFeed, botActions, arguments);
