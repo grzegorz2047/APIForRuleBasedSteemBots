@@ -16,6 +16,7 @@ import pl.grzegorz2047.botapi.bot.helpinformations.NewestPostInTagsInformation;
 import pl.grzegorz2047.botapi.bot.helpinformations.NewestUserPostInformation;
 import pl.grzegorz2047.botapi.bot.interfaces.BotAction;
 import pl.grzegorz2047.botapi.bot.interfaces.HelpInformation;
+import pl.grzegorz2047.botapi.bot.rules.DontVoteOnNicksFromListRule;
 import pl.grzegorz2047.botapi.bot.rules.NeverVotedBeforeOnPostRule;
 import pl.grzegorz2047.botapi.configuration.GlobalConfigurationLoader;
 import pl.grzegorz2047.botapi.interval.Interval;
@@ -147,8 +148,13 @@ public class BotsPreparator {
         HashMap<String, Argument> arguments = loadArgumentsFromProperties(globalProperties);
 
         upVoteAction.addRule("votedbefore", new NeverVotedBeforeOnPostRule());
+        upVoteAction.addRule("dontvoteonblacklisted", new DontVoteOnNicksFromListRule());
         botActions.add(upVoteAction);
-        botActions.add(new CommentAction());
+        CommentAction commentAction = new CommentAction();
+        commentAction.addRule("votedbefore", new NeverVotedBeforeOnPostRule());
+        commentAction.addRule("dontcommentonblacklisted", new DontVoteOnNicksFromListRule());
+
+        botActions.add(commentAction);
 
         botFeed.add(new NewestPostInTagsInformation());
         botFeed.add(new CurrentVotingBotCapabilitiesInformation());
