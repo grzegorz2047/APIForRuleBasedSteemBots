@@ -60,6 +60,13 @@ public class NewestPostInTagsInformation implements HelpInformation {
         String botName = botArguments.get("botName").asString();
         boolean botOnVoterList = new ActionProcessor().isBotOnVoterList(fairRandomPost.getActiveVotes(), botName);
         outputData.put("votedBefore", new Argument(new Argument(botOnVoterList)));
+
+        for (String reply : fairRandomPost.getReplies()){
+            System.out.println("reply: " + reply);
+        }
+
+
+        outputData.put("commentedOnPost", new Argument(new Argument(true)));
         outputData.put("userAccount", new Argument(author.getName()));
         Permlink permlink = fairRandomPost.getPermlink();
         outputData.put("permlink", new Argument(permlink.getLink()));

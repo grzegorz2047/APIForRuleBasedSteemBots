@@ -48,24 +48,9 @@ public class BotsPreparator {
         IntervalParser intervalParser = new IntervalParser();
 
 
-        String votingTagsStr = globalProperties.getProperty("votingTags");
         String botName = globalProperties.getProperty("botName");
         String postingKey = globalProperties.getProperty("postingKey");
-        boolean commentingEnabled = Boolean.parseBoolean(globalProperties.getProperty("commentingEnabled"));
-        String commentMessage = globalProperties.getProperty("message");
-        String commentTagsString = globalProperties.getProperty("votingTags");
-        boolean debugMode = Boolean.parseBoolean(globalProperties.getProperty("debug"));
-        boolean votingEnabled = Boolean.parseBoolean(globalProperties.getProperty("votingEnabled"));
-        Integer votingPower = Integer.valueOf(globalProperties.getProperty("votingPower"));
-        Long frequenceCheckInMilliseconds = Long.valueOf(globalProperties.getProperty("frequenceCheckInMilliseconds"));
-        Integer howDeepToCheckIfFirstPost = Integer.valueOf(globalProperties.getProperty("howDeepToCheckIfFirstPost"));
-        boolean checkTags = Boolean.parseBoolean(globalProperties.getProperty("checkTags"));
-        boolean reblogEnabled = Boolean.parseBoolean(globalProperties.getProperty("reblogEnabled"));
-        boolean intervalEnabled = Boolean.parseBoolean(globalProperties.getProperty("intervalsEnabled"));
-        int votingPowerLimit = Integer.parseInt(globalProperties.getProperty("votingPowerLimit"));
         String globalIntervals = globalProperties.getProperty("intervals");
-        boolean maxOneVote = Boolean.parseBoolean(globalProperties.getProperty("maxOneVoteForUserPerDay"));
-
 
         IntervalHandler globalIntervalHandler = getIntervalHandler(intervalParser, globalIntervals);
 
@@ -87,8 +72,6 @@ public class BotsPreparator {
         SteemJConfig steemConfig = SteemConfigurer.configureSteemJ(botName, postingKey);
         AccountName botAccount = steemConfig.getDefaultAccount();
 
-        String[] listOfCommentTags = commentTagsString.split(",");
-
         BotUpVoterUsersFromList botUpVoterUsersFromList = new BotUpVoterUsersFromList(steemJ, botAccount);
         List<BotAction> botActions = new LinkedList<>();
         UpVoteAction upVoteAction = new UpVoteAction();
@@ -109,13 +92,13 @@ public class BotsPreparator {
         Properties globalProperties = getGlobalProperties(globalFilePath);
         String usersFilePath = botDataPath + File.separator + "users.txt";
         createTxtFiles(usersFilePath);
-        LinkedList<String> allRequiredKeyProperties = new LinkedList<>(Arrays.asList("botName", "postingKey", "intervals"));
+        LinkedList<String> allRequiredKeyProperties = new LinkedList<>(Arrays.asList("botName", "postingKey", "intervals", "commentingEnabled"));
 
         String votingTagsStr = globalProperties.getProperty("votingTags");
         String botName = globalProperties.getProperty("botName");
         String postingKey = globalProperties.getProperty("postingKey");
-        String frequenceCheckInMilliseconds = globalProperties.getProperty("frequenceCheckInMilliseconds");
         String globalIntervals = globalProperties.getProperty("intervals");
+        boolean commentingEnabled = Boolean.parseBoolean(globalProperties.getProperty("commentingEnabled"));
 
 
         IntervalParser intervalParser = new IntervalParser();
@@ -150,12 +133,12 @@ public class BotsPreparator {
         upVoteAction.addRule("votedbefore", new NeverVotedBeforeOnPostRule());
         upVoteAction.addRule("dontvoteonblacklisted", new DontVoteOnNicksFromListRule());
         botActions.add(upVoteAction);
-        CommentAction commentAction = new CommentAction();
-        commentAction.addRule("votedbefore", new NeverVotedBeforeOnPostRule());
-        commentAction.addRule("dontcommentonblacklisted", new DontVoteOnNicksFromListRule());
-
-        botActions.add(commentAction);
-
+        if (commentingEnabled) {
+            CommentAction commentAction = new CommentAction();
+            commentAction.addRule("votedbefore", new NeverVotedBeforeOnPostRule());
+            commentAction.addRule("dontcommentonblacklisted", new DontVoteOnNicksFromListRule());
+            botActions.add(commentAction);
+        }
         botFeed.add(new NewestPostInTagsInformation());
         botFeed.add(new CurrentVotingBotCapabilitiesInformation());
 
