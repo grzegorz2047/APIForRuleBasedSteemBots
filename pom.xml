@@ -14,14 +14,17 @@
             <id>repo</id>
             <url>file://${project.basedir}/repo</url>
         </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
     </repositories>
 
     <dependencies>
         <dependency>
-            <groupId>eu.bittrade.libs</groupId>
+            <groupId>com.github.marvin-we.steem-java-api-wrapper</groupId>
             <artifactId>steemj-core</artifactId>
-            <version>0.5.0</version>
-            <scope>compile</scope>
+            <version>0.4.6-20180926-01PRE</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
